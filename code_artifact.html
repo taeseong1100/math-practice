@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="ko" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>무한급수 완전정복 (Infinite Series Master)</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 900: '#1e3a8a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- KaTeX CSS & JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Math.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Layout & Utilities */
+        body { @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300; }
+        .glass-panel { @apply bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700 shadow-xl rounded-2xl; }
+        
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        
+        /* KaTeX overrides for better visibility in dark mode */
+        .dark .katex { color: #f8fafc; }
+        .katex-display { margin: 1em 0; overflow-x: auto; overflow-y: hidden; padding-bottom: 0.5em; }
+        
+        /* Hide element utility */
+        .hidden-step { display: none !important; }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden text-sm sm:text-base">
+
+    <nav class="shrink-0 flex items-center justify-between px-4 sm:px-6 py-3 border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur z-20">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-brand-500 rounded-lg text-white">
+                <i data-lucide="sigma"></i>
+            </div>
+            <h1 class="font-bold text-lg hidden sm:block tracking-tight">무한급수 완전정복</h1>
+        </div>
+        
+        <div class="flex items-center gap-2 sm:gap-4 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+            <button id="btn-mode-challenge" class="px-3 py-1.5 rounded-lg font-medium text-sm transition-all bg-white dark:bg-slate-700 shadow-sm" onclick="switchMode('challenge')">
+                30제 챌린지
+            </button>
+            <button id="btn-mode-sandbox" class="px-3 py-1.5 rounded-lg font-medium text-sm transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white" onclick="switchMode('sandbox')">
+                커스텀 탐구실
+            </button>
+        </div>
+
+        <div class="flex items-center gap-2 sm:gap-3">
+            <button onclick="toggleCheatSheet()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-brand-600 dark:text-brand-400" title="판정법 요약">
+                <i data-lucide="book-open"></i>
+            </button>
+            <button onclick="resetProgress()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500" title="기록 초기화">
+                <i data-lucide="rotate-ccw"></i>
+            </button>
+            <button onclick="toggleTheme()" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500" title="테마 변경">
+                <i data-lucide="sun" id="theme-icon-light" class="hidden"></i>
+                <i data-lucide="moon" id="theme-icon-dark"></i>
+            </button>
+        </div>
+    </nav>
+
+    <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        
+        <!-- Left Panel: Content & Interaction -->
+        <section class="w-full lg:w-1/2 h-full lg:h-auto overflow-y-auto p-4 sm:p-6 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 relative flex flex-col gap-6" id="left-panel">
+            
+            <!-- View: Challenge Mode - Grid -->
+            <div id="view-challenge-grid" class="flex flex-col gap-6 w-full max-w-2xl mx-auto pb-20">
+                <div class="text-center mb-4">
+                    <h2 class="text-2xl font-bold mb-2 text-slate-800 dark:text-slate-100">급수 판정 마스터 클래스</h2>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm">30개의 핵심 문제를 해결하고 무한급수를 정복하세요.</p>
+                </div>
+                <!-- Progress Bar -->
+                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 mb-2">
+                  <div id="progress-bar-fill" class="bg-brand-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <div id="grid-container" class="space-y-8">
+                    <!-- Stages and Grids injected via JS -->
+                </div>
+            </div>
+
+            <!-- View: Challenge Mode - Active Problem -->
+            <div id="view-active-problem" class="hidden flex flex-col gap-6 w-full max-w-2xl mx-auto pb-20">
+                <div class="flex items-center gap-4">
+                    <button onclick="backToGrid()" class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        <i data-lucide="arrow-left"></i>
+                    </button>
+                    <h2 class="text-xl font-bold" id="problem-title">문제 제목</h2>
+                    <span id="problem-badge" class="ml-auto px-3 py-1 rounded-full text-xs font-semibold bg-slate-200 dark:bg-slate-700">Stage X</span>
+                </div>
+
+                <div class="glass-panel p-6 sm:p-8 text-center min-h-[160px] flex items-center justify-center text-xl sm:text-2xl">
+                    <div id="problem-expression"></div>
+                </div>
+
+                <!-- Steps Container -->
+                <div id="steps-container" class="flex flex-col gap-4">
+                    <!-- Steps injected via JS -->
+                </div>
+                
+                <!-- Feedback / Solution Area -->
+                <div id="solution-area" class="hidden glass-panel p-6 border-green-500/30 bg-green-50/50 dark:bg-green-900/10">
+                    <h3 class="font-bold text-green-700 dark:text-green-400 mb-4 flex items-center gap-2">
+                        <i data-lucide="check-circle"></i> 정답입니다! 풀이 과정:
+                    </h3>
+                    <div id="solution-content" class="text-slate-700 dark:text-slate-300 space-y-2"></div>
+                </div>
+            </div>
+
+            <!-- View: Sandbox Mode -->
+            <div id="view-sandbox" class="hidden flex flex-col gap-6 w-full max-w-2xl mx-auto pb-20">
+                <div class="text-center mb-4">
+                    <h2 class="text-2xl font-bold mb-2 text-slate-800 dark:text-slate-100">커스텀 급수 탐구실</h2>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm">일반항 $a_n$을 직접 입력하고 부분합의 변화를 관찰하세요.</p>
+                </div>
+
+                <div class="glass-panel p-6 flex flex-col gap-4">
+                    <label class="font-semibold text-slate-700 dark:text-slate-300">일반항 $a_n$ 식 입력 (Math.js 문법)</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="sandbox-input" placeholder="예: 1 / (n * log(n, 10))" value="1 / (n^2)"
+                            class="flex-1 px-4 py-3 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 font-mono">
+                        <button onclick="updateSandbox()" class="px-4 py-3 bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold transition-colors">
+                            분석
+                        </button>
+                    </div>
+                    
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        <span class="text-xs text-slate-500 py-1">템플릿:</span>
+                        <button onclick="setSandboxTemplate('1/n')" class="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors">조화급수</button>
+                        <button onclick="setSandboxTemplate('(-1)^n / n')" class="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors">교대조화</button>
+                        <button onclick="setSandboxTemplate('1/(n^2)')" class="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors">p-급수(p=2)</button>
+                        <button onclick="setSandboxTemplate('(1/2)^n')" class="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors">기하급수</button>
+                        <button onclick="setSandboxTemplate('2^n / factorial(n)')" class="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors">비판정법 예시</button>
+                    </div>
+
+                    <div class="mt-4 p-4 bg-slate-50 dark:bg-slate-900 rounded-lg min-h-[100px] flex items-center justify-center border border-slate-200 dark:border-slate-700">
+                        <div id="sandbox-rendered-math" class="text-xl"></div>
+                    </div>
+                    <div id="sandbox-error" class="text-red-500 text-sm hidden mt-2">유효하지 않은 수식입니다. (n 변수 사용)</div>
+                </div>
+
+                <!-- Sandbox Heuristics -->
+                <div class="glass-panel p-6 flex flex-col gap-3">
+                    <h3 class="font-semibold text-lg flex items-center gap-2 mb-2">
+                        <i data-lucide="search" class="w-5 h-5"></i> 수렴성 판정 가이드 (추정치)
+                    </h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-2">※ 매우 큰 $n$ (예: $n=1000$)을 대입하여 추정한 값입니다. 엄밀한 증명은 아닙니다.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <div class="text-xs text-slate-500 mb-1">발산판정법 확인 ($\lim_{n \to \infty} a_n$)</div>
+                            <div id="heuristic-limit" class="font-mono text-lg font-semibold">계산 대기...</div>
+                        </div>
+                        <div class="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <div class="text-xs text-slate-500 mb-1">비판정법 확인 ($\lim_{n \to \infty} |\frac{a_{n+1}}{a_n}|$)</div>
+                            <div id="heuristic-ratio" class="font-mono text-lg font-semibold">계산 대기...</div>
+                        </div>
+                    </div>
+                    <div id="heuristic-conclusion" class="mt-4 p-3 rounded bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 font-medium text-center">
+                        우측 그래프에서 부분합의 추세를 확인하세요.
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Right Panel: Visualization -->
+        <section class="w-full lg:w-1/2 h-[50vh] lg:h-full bg-slate-100 dark:bg-slate-950 border-t lg:border-t-0 border-slate-200 dark:border-slate-800 flex flex-col" id="right-panel">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white/50 dark:bg-slate-900/50">
+                <h3 class="font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                    <i data-lucide="bar-chart-3" class="w-5 h-5 text-brand-500"></i>
+                    부분합(Partial Sums) $S_N$ 시각화
+                </h3>
+                <span id="chart-status" class="text-xs px-2 py-1 bg-slate-200 dark:bg-slate-700 rounded text-slate-600 dark:text-slate-300">대기 중</span>
+            </div>
+            <div class="flex-1 relative p-4 sm:p-6 w-full h-full flex items-center justify-center min-h-[300px]">
+                <!-- Placeholder when no chart is active -->
+                <div id="chart-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 dark:text-slate-600 z-10 transition-opacity">
+                    <i data-lucide="line-chart" class="w-16 h-16 mb-4 opacity-50"></i>
+                    <p>문제를 풀거나 수식을 입력하면 그래프가 생성됩니다.</p>
+                </div>
+                <canvas id="seriesChart" class="w-full h-full"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <!-- Cheat Sheet Modal -->
+    <div id="cheat-sheet-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden transform transition-all">
+            <div class="flex justify-between items-center p-5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i data-lucide="book-open" class="text-brand-500"></i> 미적분학 무한급수 6대 판정법
+                </h2>
+                <button onclick="toggleCheatSheet()" class="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-6" id="cheat-sheet-content">
+                <!-- Content will be processed by KaTeX -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                        <h4 class="font-bold text-lg mb-2 text-red-600 dark:text-red-400">1. 발산 판정법 (Divergence Test)</h4>
+                        <p class="text-sm mb-2">어떤 급수 $\sum a_n$에 대하여,</p>
+                        <div class="bg-white dark:bg-slate-800 p-2 rounded text-center">$\lim_{n \to \infty} a_n \neq 0$ 이면, $\sum a_n$은 발산한다.</div>
+                        <p class="text-xs text-slate-500 mt-2">주의: 극한이 0이라고 해서 수렴하는 것은 아님 (역은 성립 안 함).</p>
+                    </div>
+                    <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                        <h4 class="font-bold text-lg mb-2 text-brand-600 dark:text-brand-400">2. 기하급수 판정법 (Geometric Series)</h4>
+                        <p class="text-sm mb-2">$\sum_{n=1}^{\infty} a r^{n-1}$ 형태의 급수:</p>
+                        <div class="bg-white dark:bg-slate-800 p-2 rounded text-center">$|r| < 1$ 이면 수렴 (합: $\frac{a}{1-r}$)<br>$|r| \ge 1$ 이면 발산</div>
+                    </div>
+                    <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                        <h4 class="font-bold text-lg mb-2 text-emerald-600 dark:text-emerald-400">3. 적분 판정법 (Integral Test)</h4>
+                        <p class="text-sm mb-2">$f(n) = a_n$인 함수 $f(x)$가 연속, 양수, 감소함수일 때:</p>
+                        <div class="bg-white dark:bg-slate-800 p-2 rounded text-center">$\int_{1}^{\infty} f(x) dx$ 가 수렴 $\iff \sum a_n$ 수렴</div>
+                        <p class="text-xs text-slate-500 mt-2">p-급수 $\sum \frac{1}{n^p}$는 $p>1$일 때 수렴, $p \le 1$일 때 발산.</p>
+                    </div>
+                    <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                        <h4 class="font-bold text-lg mb-2 text-orange-600 dark:text-orange-400">4. 비교 / 극한비교 판정법</h4>
+                        <p class="text-sm mb-2">두 양항급수 $\sum a_n, \sum b_n$에 대해 $\lim_{n \to \infty} \frac{a_n}{b_n} = L > 0$ 이면:</p>
+                        <div class="bg-white dark:bg-slate-800 p-2 rounded text-center">$\sum a_n$과 $\sum b_n$은 운명을 같이한다 (동시에 수렴/발산).</div>
+                    </div>
+                    <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                        <h4 class="font-bold text-lg mb-2 text-purple-600 dark:text-purple-400">5. 교대급수 판정법 (Alternating Series)</h4>
+                        <p class="text-sm mb-2">$\sum (-1)^{n-1} b_n$ ($b_n > 0$) 형태에서:</p>
+                        <div class="bg-white dark:bg-slate-800 p-2 rounded text-center">1. $b_{n+1} \le b_n$ (단조감소)<br>2. $\lim_{n \to \infty} b_n = 0$<br>두 조건을 만족하면 수렴.</div>
+                    </div>
+                    <div class="p-4 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                        <h4 class="font-bold text-lg mb-2 text-indigo-600 dark:text-indigo-400">6. 비판정법 (Ratio Test)</h4>
+                        <p class="text-sm mb-2">$\lim_{n \to \infty} \left| \frac{a_{n+1}}{a_n} \right| = L$ 일 때:</p>
+                        <div class="bg-white dark:bg-slate-800 p-2 rounded text-center">$L < 1$: 절대수렴<br>$L > 1$: 발산<br>$L = 1$: 판정 불가</div>
+                        <p class="text-xs text-slate-500 mt-2">팩토리얼(!)이나 거듭제곱이 섞여 있을 때 유용.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-200 dark:border-slate-700 text-center bg-slate-50 dark:bg-slate-900/50">
+                <button onclick="toggleCheatSheet()" class="px-6 py-2 bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 font-semibold rounded-lg hover:opacity-90 transition-opacity">
+                    닫기
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        const STORAGE_KEY = 'calculusSeriesProgress_v1';
+        let progressData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+        // progressData = { 'prob_1': 'success', 'prob_2': 'fail', ... }
+        let currentMode = 'challenge'; // 'challenge' | 'sandbox'
+        let currentProblemId = null;
+        let myChart = null;
+
+        // --- Problem Data Definition ---
+        // 30-grid setup, but implementing 8 real problems for demonstration. The rest are "coming soon".
+        const STAGES = [
+            { id: 1, name: "Stage 1: 발산 & 기하 & 망원", count: 6 },
+            { id: 2, name: "Stage 2: 적분 & p-급수", count: 6 },
+            { id: 3, name: "Stage 3: 비교 판정법", count: 6 },
+            { id: 4, name: "Stage 4: 교대급수 & 조건부 수렴", count: 6 },
+            { id: 5, name: "Stage 5: 비/근판정법 & 멱급수", count: 6 }
+        ];
+
+        const REAL_PROBLEMS = {
+            // Stage 1
+            1: {
+                title: "기본 기하급수", stage: 1, 
+                latex: "\\sum_{n=1}^{\\infty} 3 \\left(\\frac{2}{5}\\right)^{n-1}", mathExpr: "3 * (2/5)^(n-1)",
+                steps: [
+                    { q: "가장 먼저 고려해야 할 판정법은?", opts: ["발산 판정법", "기하급수 판정법", "적분 판정법", "비판정법"], ans: 1, hint: "상수항과 r^n 꼴로 이루어져 있습니다." },
+                    { q: "공비 r의 절댓값은?", opts: ["3", "2", "2/5", "5/2"], ans: 2, hint: "n이 커질 때 곱해지는 값을 찾으세요." },
+                    { q: "최종 결론은?", opts: ["수렴 (합: 5)", "수렴 (합: 15/2)", "수렴 (합: 1)", "발산"], ans: 0, hint: "합공식 S = a / (1 - r) 에 대입하세요. a=3, r=2/5." }
+                ],
+                solution: "이 급수는 첫째항 $a=3$, 공비 $r=2/5$인 기하급수입니다.<br> $|r| = 2/5 < 1$ 이므로 수렴합니다.<br> 급수의 합 $S = \\frac{a}{1-r} = \\frac{3}{1 - 2/5} = \\frac{3}{3/5} = 5$ 입니다."
+            },
+            2: {
+                title: "은밀한 발산", stage: 1,
+                latex: "\\sum_{n=1}^{\\infty} \\frac{n^2 + 1}{2n^2 - 3}", mathExpr: "(n^2 + 1) / (2*n^2 - 3)",
+                steps: [
+                    { q: "가장 먼저 고려해야 할 판정법은?", opts: ["발산 판정법", "적분 판정법", "극한비교 판정법", "교대급수 판정법"], ans: 0, hint: "분자와 분모의 최고차항 차수가 같습니다. n이 무한대로 갈 때 일반항을 확인하세요." },
+                    { q: "일반항 a_n의 극한값(n->∞)은?", opts: ["0", "1/2", "1", "무한대"], ans: 1, hint: "최고차항의 계수비." },
+                    { q: "최종 결론은?", opts: ["수렴", "발산", "조건부 수렴", "판정 불가"], ans: 1, hint: "일반항의 극한이 0이 아니면 발산판정법에 의해 무조건 발산입니다." }
+                ],
+                solution: "$a_n = \\frac{n^2 + 1}{2n^2 - 3}$ 라고 할 때, $\\lim_{n \\to \\infty} a_n = \\frac{1}{2}$ 입니다.<br> 일반항의 극한값이 $0$이 아니므로, 발산 판정법에 의해 이 급수는 <b>발산</b>합니다."
+            },
+            // Stage 2
+            7: {
+                title: "p-급수의 기본", stage: 2,
+                latex: "\\sum_{n=1}^{\\infty} \\frac{1}{n\\sqrt{n}}", mathExpr: "1 / (n * sqrt(n))",
+                steps: [
+                    { q: "이 급수를 다루기 가장 적합한 형태는?", opts: ["기하급수", "p-급수", "망원급수", "멱급수"], ans: 1, hint: "n의 거듭제곱 형태로 표현해보세요." },
+                    { q: "일반항을 1/n^p 형태로 쓸 때 p의 값은?", opts: ["1/2", "1", "3/2", "2"], ans: 2, hint: "n * n^{1/2} = n^{3/2}" },
+                    { q: "최종 결론은?", opts: ["수렴", "발산", "조건부 수렴", "판정 불가"], ans: 0, hint: "p > 1 이면 수렴, p <= 1 이면 발산입니다." }
+                ],
+                solution: "일반항은 $\\frac{1}{n\\sqrt{n}} = \\frac{1}{n^{3/2}}$ 입니다.<br>이는 $p = 3/2$ 인 p-급수 형태입니다.<br>$p > 1$ 이므로 p-급수 판정법(적분 판정법의 결과)에 의해 <b>수렴</b>합니다."
+            },
+            // Stage 3
+            13: {
+                title: "비슷한 놈 찾기 (극한비교)", stage: 3,
+                latex: "\\sum_{n=1}^{\\infty} \\frac{3n - 1}{n^3 + n^2 + 5}", mathExpr: "(3*n - 1) / (n^3 + n^2 + 5)",
+                steps: [
+                    { q: "비교 대상으로 삼을 급수 b_n은?", opts: ["1/n", "1/n^2", "1/n^3", "3/n^3"], ans: 1, hint: "분자와 분모의 최고차항만 남겨서 비율을 보세요." },
+                    { q: "a_n / b_n 의 극한값(n->∞) L은?", opts: ["0", "1", "3", "무한대"], ans: 2, hint: "((3n-1)/(n^3+n^2+5)) * (n^2/1) 의 극한" },
+                    { q: "최종 결론은?", opts: ["수렴", "발산", "조건부 수렴", "판정 불가"], ans: 0, hint: "L > 0 이고 유한하며, b_n(1/n^2)이 수렴하므로 a_n도 같이 수렴합니다." }
+                ],
+                solution: "$b_n = \\frac{1}{n^2}$을 선택하여 극한비교판정법을 적용합니다.<br>$\\lim_{n\\to\\infty} \\frac{a_n}{b_n} = \\lim_{n\\to\\infty} \\frac{3n^3 - n^2}{n^3 + n^2 + 5} = 3 > 0$<br>$\\sum \\frac{1}{n^2}$이 p-급수($p=2>1$)로 수렴하므로, 주어진 급수도 <b>수렴</b>합니다."
+            },
+            // Stage 4
+            19: {
+                title: "교대 조화급수", stage: 4,
+                latex: "\\sum_{n=1}^{\\infty} \\frac{(-1)^{n-1}}{n}", mathExpr: "((-1)^(n-1)) / n",
+                steps: [
+                    { q: "적용할 판정법은?", opts: ["기하급수 판정법", "교대급수 판정법", "적분 판정법", "발산 판정법"], ans: 1, hint: "(-1)^n 형태의 부호가 번갈아 나타납니다." },
+                    { q: "교대급수 판정 조건을 만족하나요?", opts: ["만족함 (단조감소, 극한 0)", "단조감소 안함", "극한이 0 아님", "조건 확인 불가"], ans: 0, hint: "b_n = 1/n 의 특성을 확인하세요." },
+                    { q: "절대수렴 여부를 포함한 최종 결론은?", opts: ["절대수렴", "조건부 수렴", "발산", "진동"], ans: 1, hint: "원래 급수는 수렴하지만, 절댓값을 씌운 조화급수(1/n)는 발산합니다." }
+                ],
+                solution: "$b_n = \\frac{1}{n}$ 이라 할 때,<br>1) $b_{n+1} < b_n$ (단조감소)<br>2) $\\lim_{n\\to\\infty} b_n = 0$<br>이므로 교대급수 판정법에 의해 원래 급수는 수렴합니다.<br>하지만 절댓값을 씌운 $\\sum \\frac{1}{n}$은 조화급수($p=1$)로 발산하므로, 이 급수는 <b>조건부 수렴</b>합니다."
+            },
+            // Stage 5
+            25: {
+                title: "팩토리얼의 위력", stage: 5,
+                latex: "\\sum_{n=1}^{\\infty} \\frac{2^n}{n!}", mathExpr: "(2^n) / factorial(n)",
+                steps: [
+                    { q: "팩토리얼이 포함된 급수에 가장 강력한 판정법은?", opts: ["적분 판정법", "극한비교 판정법", "비판정법 (Ratio Test)", "근판정법 (Root Test)"], ans: 2, hint: "n! 이나 a^n 형태가 섞여있을 땐 이웃한 항의 비를 봅니다." },
+                    { q: "비판정법의 극한 |a_{n+1}/a_n| 값 L은?", opts: ["0", "1/2", "2", "무한대"], ans: 0, hint: "(2^{n+1}/(n+1)!) * (n!/2^n) = 2/(n+1) -> n이 무한대일 때?" },
+                    { q: "최종 결론은?", opts: ["절대수렴", "조건부 수렴", "발산", "판정 불가"], ans: 0, hint: "L < 1 이면 절대수렴합니다." }
+                ],
+                solution: "비판정법을 적용합니다.<br>$\\lim_{n\\to\\infty} \\left| \\frac{a_{n+1}}{a_n} \\right| = \\lim_{n\\to\\infty} \\frac{2^{n+1}}{(n+1)!} \\frac{n!}{2^n} = \\lim_{n\\to\\infty} \\frac{2}{n+1} = 0$<br>$L = 0 < 1$ 이므로 비판정법에 의해 주어진 급수는 <b>절대수렴</b>합니다."
+            }
+        };
+
+        // --- STREAMING_CHUNK:Initialization & Core Functions... ---
+        window.onload = () => {
+            initIcons();
+            initTheme();
+            initChart();
+            renderChallengeGrid();
+            renderMathInElement(document.body, {
+                delimiters: [
+                    {left: "$$", right: "$$", display: true},
+                    {left: "$", right: "$", display: false}
+                ]
+            });
+            updateProgressBar();
+        };
+
+        function initIcons() {
+            lucide.createIcons();
+        }
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('calculusTheme') || 'light';
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+                document.getElementById('theme-icon-light').classList.remove('hidden');
+                document.getElementById('theme-icon-dark').classList.add('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('theme-icon-dark').classList.remove('hidden');
+                document.getElementById('theme-icon-light').classList.add('hidden');
+            }
+        }
+
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('calculusTheme', isDark ? 'dark' : 'light');
+            
+            document.getElementById('theme-icon-light').classList.toggle('hidden', !isDark);
+            document.getElementById('theme-icon-dark').classList.toggle('hidden', isDark);
+            
+            if(myChart) {
+                myChart.options.scales.x.grid.color = isDark ? '#334155' : '#e2e8f0';
+                myChart.options.scales.y.grid.color = isDark ? '#334155' : '#e2e8f0';
+                myChart.options.scales.x.ticks.color = isDark ? '#94a3b8' : '#64748b';
+                myChart.options.scales.y.ticks.color = isDark ? '#94a3b8' : '#64748b';
+                myChart.options.plugins.legend.labels.color = isDark ? '#f8fafc' : '#0f172a';
+                myChart.update();
+            }
+        }
+
+        function toggleCheatSheet() {
+            const modal = document.getElementById('cheat-sheet-modal');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function switchMode(mode) {
+            currentMode = mode;
+            const btnChallenge = document.getElementById('btn-mode-challenge');
+            const btnSandbox = document.getElementById('btn-mode-sandbox');
+            const viewGrid = document.getElementById('view-challenge-grid');
+            const viewProblem = document.getElementById('view-active-problem');
+            const viewSandbox = document.getElementById('view-sandbox');
+
+            // Reset UI states
+            clearChart();
+            
+            if (mode === 'challenge') {
+                btnChallenge.className = "px-3 py-1.5 rounded-lg font-medium text-sm transition-all bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white";
+                btnSandbox.className = "px-3 py-1.5 rounded-lg font-medium text-sm transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white";
+                
+                viewSandbox.classList.add('hidden');
+                if (currentProblemId) {
+                    viewProblem.classList.remove('hidden');
+                    viewGrid.classList.add('hidden');
+                    // Restore chart if finished
+                    if(progressData[currentProblemId] === 'success') {
+                        generateChartForProblem(currentProblemId);
+                    }
+                } else {
+                    viewGrid.classList.remove('hidden');
+                    viewProblem.classList.add('hidden');
+                }
+            } else {
+                btnSandbox.className = "px-3 py-1.5 rounded-lg font-medium text-sm transition-all bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white";
+                btnChallenge.className = "px-3 py-1.5 rounded-lg font-medium text-sm transition-all text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white";
+                
+                viewGrid.classList.add('hidden');
+                viewProblem.classList.add('hidden');
+                viewSandbox.classList.remove('hidden');
+                
+                // Initialize sandbox if empty
+                updateSandbox();
+            }
+        }
+
+        function saveProgress() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(progressData));
+            updateProgressBar();
+        }
+
+        function resetProgress() {
+            if(confirm("모든 문제 풀이 기록을 초기화하시겠습니까?")) {
+                progressData = {};
+                saveProgress();
+                renderChallengeGrid();
+                if(currentProblemId) backToGrid();
+            }
+        }
+
+        function updateProgressBar() {
+            let total = 30; // Total planned problems
+            let solved = Object.values(progressData).filter(v => v === 'success').length;
+            let percent = (solved / total) * 100;
+            document.getElementById('progress-bar-fill').style.width = `${percent}%`;
+        }
+
+        // --- STREAMING_CHUNK:Mode 1 (Challenge) Logic... ---
+        function renderChallengeGrid() {
+            const container = document.getElementById('grid-container');
+            container.innerHTML = '';
+            
+            let problemCounter = 1;
+
+            STAGES.forEach(stage => {
+                const stageDiv = document.createElement('div');
+                stageDiv.className = 'animate-fade-in';
+                
+                const title = document.createElement('h3');
+                title.className = 'text-lg font-bold mb-3 border-b border-slate-200 dark:border-slate-700 pb-2';
+                title.innerText = stage.name;
+                stageDiv.appendChild(title);
+
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-3 sm:grid-cols-6 gap-3';
+                
+                for (let i = 0; i < stage.count; i++) {
+                    const pid = problemCounter;
+                    const btn = document.createElement('button');
+                    const status = progressData[pid];
+                    const isReal = REAL_PROBLEMS[pid] !== undefined;
+
+                    let bgClass = "bg-white dark:bg-slate-800 hover:border-brand-400 border-slate-200 dark:border-slate-700";
+                    let textClass = "text-slate-700 dark:text-slate-300";
+                    let iconHtml = `<span class="text-sm font-semibold">${pid}</span>`;
+
+                    if (status === 'success') {
+                        bgClass = "bg-green-500 text-white border-green-600 shadow-inner";
+                        textClass = "text-white";
+                        iconHtml = `<i data-lucide="check" class="w-5 h-5 mx-auto"></i>`;
+                    } else if (status === 'fail') {
+                        bgClass = "bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700";
+                        textClass = "text-orange-600 dark:text-orange-400";
+                    }
+
+                    if (!isReal) {
+                        bgClass = "bg-slate-100 dark:bg-slate-800/50 border-dashed border-slate-300 dark:border-slate-700 opacity-50 cursor-not-allowed";
+                        iconHtml = `<i data-lucide="lock" class="w-4 h-4 mx-auto opacity-50"></i>`;
+                        btn.disabled = true;
+                    }
+
+                    btn.className = `aspect-square flex flex-col items-center justify-center rounded-xl border-2 transition-all duration-200 ${bgClass} ${textClass}`;
+                    btn.innerHTML = iconHtml;
+                    
+                    if(isReal) {
+                        btn.onclick = () => openProblem(pid);
+                    }
+                    
+                    grid.appendChild(btn);
+                    problemCounter++;
+                }
+                
+                stageDiv.appendChild(grid);
+                container.appendChild(stageDiv);
+            });
+            lucide.createIcons();
+        }
+
+        let currentStepIndex = 0;
+
+        function openProblem(pid) {
+            currentProblemId = pid;
+            const prob = REAL_PROBLEMS[pid];
+            currentStepIndex = 0;
+            clearChart();
+
+            document.getElementById('view-challenge-grid').classList.add('hidden');
+            document.getElementById('view-active-problem').classList.remove('hidden');
+            
+            document.getElementById('problem-title').innerText = `${pid}번: ${prob.title}`;
+            document.getElementById('problem-badge').innerText = `Stage ${prob.stage}`;
+            
+            const exprDiv = document.getElementById('problem-expression');
+            exprDiv.innerHTML = `$$${prob.latex}$$`;
+            katex.render(`\\displaystyle ${prob.latex}`, exprDiv, { displayMode: true, throwOnError: false });
+
+            document.getElementById('solution-area').classList.add('hidden');
+            renderSteps(prob);
+            
+            // If already solved, show everything
+            if (progressData[pid] === 'success') {
+                showFullSolution(prob);
+            }
+        }
+
+        function backToGrid() {
+            currentProblemId = null;
+            document.getElementById('view-active-problem').classList.add('hidden');
+            document.getElementById('view-challenge-grid').classList.remove('hidden');
+            clearChart();
+            renderChallengeGrid();
+        }
+
+        function renderSteps(prob) {
+            const container = document.getElementById('steps-container');
+            container.innerHTML = '';
+            
+            prob.steps.forEach((step, index) => {
+                const stepDiv = document.createElement('div');
+                stepDiv.id = `step-${index}`;
+                // Hide future steps initially unless solved
+                const isHidden = (index > currentStepIndex) && (progressData[currentProblemId] !== 'success');
+                stepDiv.className = `glass-panel p-5 transition-all duration-500 ${isHidden ? 'hidden-step opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`;
+                
+                let stepTitle = "";
+                if(index === 0) stepTitle = "Step 1. 전략 선택";
+                if(index === 1) stepTitle = "Step 2. 핵심 조건 확인";
+                if(index === 2) stepTitle = "Step 3. 최종 결론";
+
+                let html = `
+                    <h4 class="font-bold text-brand-600 dark:text-brand-400 mb-2">${stepTitle}</h4>
+                    <p class="font-medium mb-4 text-slate-800 dark:text-slate-200">${step.q}</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                `;
+
+                step.opts.forEach((opt, optIdx) => {
+                    // Disable buttons if already past this step or solved
+                    const disabled = (index < currentStepIndex || progressData[currentProblemId] === 'success') ? 'disabled' : '';
+                    let btnClass = "px-4 py-3 text-left rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-brand-500 dark:hover:border-brand-500 transition-colors focus:outline-none";
+                    
+                    // Style correctly if previously selected/answered
+                    if (progressData[currentProblemId] === 'success' && optIdx === step.ans) {
+                        btnClass = "px-4 py-3 text-left rounded-lg border border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-semibold";
+                    }
+
+                    html += `<button ${disabled} class="${btnClass}" onclick="handleAnswer(${index}, ${optIdx}, ${step.ans}, this)">${opt}</button>`;
+                });
+                
+                html += `</div>
+                    <div id="hint-${index}" class="hidden mt-3 text-sm text-red-500 flex items-center gap-1">
+                        <i data-lucide="alert-circle" class="w-4 h-4"></i> ${step.hint}
+                    </div>
+                `;
+                
+                stepDiv.innerHTML = html;
+                container.appendChild(stepDiv);
+            });
+            lucide.createIcons();
+        }
+
+        function handleAnswer(stepIndex, selectedOpt, correctOpt, btnElement) {
+            if (selectedOpt === correctOpt) {
+                // Correct
+                btnElement.classList.remove('bg-white', 'dark:bg-slate-800', 'border-slate-200', 'hover:border-brand-500');
+                btnElement.classList.add('bg-green-100', 'dark:bg-green-900/40', 'border-green-500', 'text-green-700', 'dark:text-green-300');
+                
+                // Disable siblings
+                const siblings = btnElement.parentElement.children;
+                for(let el of siblings) { el.disabled = true; }
+
+                if (stepIndex < 2) {
+                    currentStepIndex++;
+                    const nextStep = document.getElementById(`step-${currentStepIndex}`);
+                    nextStep.classList.remove('hidden-step');
+                    // Trigger reflow for animation
+                    void nextStep.offsetWidth; 
+                    nextStep.classList.remove('opacity-0', 'translate-y-4');
+                    nextStep.classList.add('opacity-100', 'translate-y-0');
+                } else {
+                    // Fully Solved
+                    progressData[currentProblemId] = 'success';
+                    saveProgress();
+                    showFullSolution(REAL_PROBLEMS[currentProblemId]);
+                }
+            } else {
+                // Incorrect
+                btnElement.classList.add('bg-red-50', 'dark:bg-red-900/20', 'border-red-400', 'animate-pulse');
+                setTimeout(() => btnElement.classList.remove('animate-pulse'), 500);
+                document.getElementById(`hint-${stepIndex}`).classList.remove('hidden');
+                
+                if(progressData[currentProblemId] !== 'success') {
+                    progressData[currentProblemId] = 'fail';
+                    saveProgress();
+                }
+            }
+        }
+
+        function showFullSolution(prob) {
+            const solArea = document.getElementById('solution-area');
+            const solContent = document.getElementById('solution-content');
+            solArea.classList.remove('hidden');
+            solArea.classList.add('animate-fade-in');
+            solContent.innerHTML = prob.solution;
+            
+            // Re-render math in solution
+            renderMathInElement(solContent, {
+                delimiters: [ {left: "$", right: "$", display: false} ]
+            });
+            
+            generateChartForProblem(currentProblemId);
+        }
+
+        // --- STREAMING_CHUNK:Chart & Math Calculations... ---
+        function initChart() {
+            const ctx = document.getElementById('seriesChart').getContext('2d');
+            const isDark = document.documentElement.classList.contains('dark');
+            
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            Chart.defaults.color = isDark ? '#94a3b8' : '#64748b';
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: { labels: [], datasets: [] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 800, easing: 'easeOutQuart' },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', labels: { color: isDark ? '#f8fafc' : '#0f172a', usePointStyle: true } },
+                        tooltip: { backgroundColor: isDark ? 'rgba(15, 23, 42, 0.9)' : 'rgba(255, 255, 255, 0.9)', titleColor: isDark ? '#fff' : '#000', bodyColor: isDark ? '#cbd5e1' : '#334155', borderColor: isDark ? '#334155' : '#e2e8f0', borderWidth: 1 }
+                    },
+                    scales: {
+                        x: { 
+                            title: { display: true, text: '항의 개수 (N)' },
+                            grid: { color: isDark ? '#334155' : '#e2e8f0' },
+                            ticks: { color: isDark ? '#94a3b8' : '#64748b' }
+                        },
+                        y: {
+                            title: { display: true, text: '부분합 S_N' },
+                            grid: { color: isDark ? '#334155' : '#e2e8f0' },
+                            ticks: { color: isDark ? '#94a3b8' : '#64748b' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function clearChart() {
+            document.getElementById('chart-placeholder').style.opacity = '1';
+            document.getElementById('chart-placeholder').style.pointerEvents = 'auto';
+            document.getElementById('chart-status').innerText = '대기 중';
+            if(myChart) {
+                myChart.data.labels = [];
+                myChart.data.datasets = [];
+                myChart.update();
+            }
+        }
+
+        function generateChartForProblem(pid) {
+            const prob = REAL_PROBLEMS[pid];
+            if(!prob || !prob.mathExpr) return;
+            drawSeriesChart(prob.mathExpr, 50, prob.latex);
+        }
+
+        function drawSeriesChart(expressionString, maxN, labelStr) {
+            document.getElementById('chart-placeholder').style.opacity = '0';
+            document.getElementById('chart-placeholder').style.pointerEvents = 'none';
+            document.getElementById('chart-status').innerText = '렌더링 완료';
+
+            let labels = [];
+            let partialSums = [];
+            let terms = [];
+            let currentSum = 0;
+            let expr;
+            
+            try {
+                expr = math.compile(expressionString);
+            } catch (e) {
+                console.error("Math.js compile error", e);
+                return;
+            }
+
+            for (let n = 1; n <= maxN; n++) {
+                try {
+                    let val = expr.evaluate({ n: n });
+                    // Handle Infinity or NaN gracefully for charts
+                    if(!isFinite(val)) {
+                        if(n===1) currentSum = val; // let it break
+                        break; 
+                    }
+                    currentSum += val;
+                    labels.push(n);
+                    partialSums.push(currentSum);
+                    terms.push(val);
+                } catch(e) { break; }
+            }
+
+            myChart.data.labels = labels;
+            myChart.data.datasets = [
+                {
+                    label: `부분합 S_N`,
+                    data: partialSums,
+                    borderColor: '#3b82f6', // brand-500
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    pointHoverRadius: 5,
+                    fill: true,
+                    tension: 0.1
+                },
+                {
+                    label: `일반항 a_n`,
+                    data: terms,
+                    borderColor: '#94a3b8',
+                    borderWidth: 1,
+                    pointRadius: 1,
+                    borderDash: [5, 5],
+                    fill: false,
+                    hidden: true // hide by default
+                }
+            ];
+            myChart.update();
+        }
+
+        // --- STREAMING_CHUNK:Mode 2 (Sandbox) Logic... ---
+        function setSandboxTemplate(expr) {
+            document.getElementById('sandbox-input').value = expr;
+            updateSandbox();
+        }
+
+        function updateSandbox() {
+            const inputVal = document.getElementById('sandbox-input').value;
+            const errorDiv = document.getElementById('sandbox-error');
+            const renderDiv = document.getElementById('sandbox-rendered-math');
+            const limitDiv = document.getElementById('heuristic-limit');
+            const ratioDiv = document.getElementById('heuristic-ratio');
+            const conclDiv = document.getElementById('heuristic-conclusion');
+
+            errorDiv.classList.add('hidden');
+            limitDiv.innerText = "계산 중...";
+            ratioDiv.innerText = "계산 중...";
+            
+            try {
+                // 1. Render KaTeX
+                const texString = math.parse(inputVal).toTex({parenthesis: 'auto'});
+                renderDiv.innerHTML = `$$ a_n = ${texString} $$`;
+                katex.render(`\\displaystyle a_n = ${texString}`, renderDiv, { displayMode: true, throwOnError: false });
+
+                // 2. Draw Chart (N=1 to 100)
+                drawSeriesChart(inputVal, 100, "커스텀 급수");
+
+                // 3. Heuristics calculation
+                const expr = math.compile(inputVal);
+                
+                // N=1000 for large n approximation
+                const N_LARGE = 1000;
+                let a_large = expr.evaluate({n: N_LARGE});
+                let a_large_plus_1 = expr.evaluate({n: N_LARGE + 1});
+
+                // Heuristic 1: Divergence Test (lim a_n -> 0 ?)
+                let limitStr = "0 에 수렴 예상";
+                let isDivergent = false;
+                if (Math.abs(a_large) > 1e-4) {
+                    limitStr = `${a_large.toFixed(4)} (0이 아님) -> 발산 유력`;
+                    isDivergent = true;
+                }
+                limitDiv.innerText = limitStr;
+
+                // Heuristic 2: Ratio Test
+                let ratioStr = "판정 불가";
+                let isRatioConv = false;
+                if (Math.abs(a_large) > 1e-10) {
+                    let ratio = Math.abs(a_large_plus_1 / a_large);
+                    ratioStr = `L ≈ ${ratio.toFixed(4)}`;
+                    if (ratio < 0.99) {
+                        ratioStr += " (<1, 절대수렴 유력)";
+                        isRatioConv = true;
+                    } else if (ratio > 1.01) {
+                        ratioStr += " (>1, 발산 유력)";
+                        isDivergent = true;
+                    } else {
+                        ratioStr += " (=1 근접, 판정 불가)";
+                    }
+                }
+                ratioDiv.innerText = ratioStr;
+
+                // Conclusion
+                conclDiv.className = "mt-4 p-3 rounded font-medium text-center transition-colors";
+                if (isDivergent) {
+                    conclDiv.classList.add("bg-red-50", "dark:bg-red-900/30", "text-red-800", "dark:text-red-300");
+                    conclDiv.innerText = "추정 결과: 발산할 가능성이 매우 높습니다.";
+                } else if (isRatioConv) {
+                    conclDiv.classList.add("bg-green-50", "dark:bg-green-900/30", "text-green-800", "dark:text-green-300");
+                    conclDiv.innerText = "추정 결과: 강력하게 수렴할 것으로 보입니다.";
+                } else {
+                    conclDiv.classList.add("bg-blue-50", "dark:bg-blue-900/30", "text-blue-800", "dark:text-blue-300");
+                    conclDiv.innerText = "추정 결과: 판정이 애매합니다. p-급수나 교대급수인지 확인하세요.";
+                }
+
+            } catch (error) {
+                console.warn(error);
+                errorDiv.classList.remove('hidden');
+                clearChart();
+                renderDiv.innerHTML = "";
+                limitDiv.innerText = "에러";
+                ratioDiv.innerText = "에러";
+                conclDiv.className = "mt-4 p-3 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 text-center";
+                conclDiv.innerText = "수식을 올바르게 입력해주세요.";
+            }
+        }
+        
+        // Setup enter key for sandbox
+        document.getElementById('sandbox-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                updateSandbox();
+            }
+        });
+
+    </script>
+</body>
+</html>
